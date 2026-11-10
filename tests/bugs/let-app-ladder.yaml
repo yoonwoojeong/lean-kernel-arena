@@ -1,0 +1,36 @@
+description: |
+  Proof of False via a `let` whose body is a binary application ending in
+  another `let`, where the second argument is never checked against the
+  function's domain.
+
+  ```
+  def FalseTy : Prop := ∀ P : Prop, P
+  def TrueTy : Prop := ∀ P : Prop, P → P
+  def trueProof : TrueTy := fun _ p => p
+  def toProp : Prop → Type → Type := fun _ _ => Prop
+  def Bad : Prop := let x : Prop := TrueTy; toProp x (let y : Prop := TrueTy; TrueTy)
+  def z : Bad := TrueTy
+  def o : Bad := FalseTy
+  def cast : Bad → Prop := fun b => b
+  def conv : cast z → cast o := fun h => h
+  theorem boom : FalseTy := conv trueProof
+  ```
+
+  `Bad` is ill typed: the inner `let` has type `Prop`, but `toProp` expects a
+  `Type`, and the value has type `Type`, not `Prop`. A checker that accepts it
+  has a constant that it believes to be a proposition and that unfolds to
+  `Prop`. Then `z` and `o` are two "proofs" of `Bad`, so `cast z` and `cast o`
+  are definitionally equal by proof irrelevance, while they unfold to `TrueTy`
+  and `FalseTy`. The file has no axioms and no inductive types.
+
+  Found in [ocaml4lean](https://github.com/yoonwoojeong/ocaml4lean/pull/7), in a
+  performance change that was merged and then reverted. To infer the type of a
+  ladder `let x := v; f a (let y := w; …)` without substituting each variable
+  into the rest, it walked through `f a (…)` whenever `f : A → B → B`, checked
+  `a` against `A`, and went on with the inner `let`. It neither compared the
+  type of the inner `let` with `B` nor returned `B`: the whole term got the
+  type of the innermost body.
+# Hand-written export file: Lean does not elaborate `Bad`, so lean4export cannot
+# produce it.
+file: tests/bugs/let-app-ladder.ndjson
+outcome: reject

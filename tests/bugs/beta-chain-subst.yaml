@@ -1,0 +1,32 @@
+description: |
+  An ill-typed nested beta redex that becomes well typed once the arguments
+  are substituted.
+
+  ```
+  def TrueTy : Prop := ∀ P : Prop, P → P
+  def trueProof : TrueTy := fun _ p => p
+  theorem bad : TrueTy :=
+    (fun (P : Prop) => (fun (Q : Prop) => (fun (h : P) => h) trueProof) TrueTy) TrueTy
+  ```
+
+  Inside the outer lambda, `P` is an arbitrary proposition, so `trueProof` is
+  not an argument for `fun (h : P) => h`, and the official kernel rejects
+  `bad` with an application type mismatch. The body of a lambda has to be
+  checked with its variable abstract, also when the lambda is applied right
+  away.
+
+  A checker that infers the type of `(fun x => b) a` from `b[a/x]` sees
+  `(fun (h : TrueTy) => h) trueProof` instead and accepts. This alone does not
+  prove False, since the reduct is well typed, but the checker accepts a
+  declaration that is not a term of the theory.
+
+  Found in [ocaml4lean](https://github.com/yoonwoojeong/ocaml4lean/pull/7), in a
+  performance change that was merged and then reverted. It collapsed a chain
+  of at least two nested beta redexes with closed arguments into one
+  simultaneous substitution before inferring the type of the body, so the
+  test needs the two redexes around the offending application; a single
+  redex took the ordinary path.
+# Hand-written export file: Lean does not elaborate `bad`, so lean4export cannot
+# produce it.
+file: tests/bugs/beta-chain-subst.ndjson
+outcome: reject
