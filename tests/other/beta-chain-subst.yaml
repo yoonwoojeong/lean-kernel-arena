@@ -28,5 +28,5 @@ description: |
   redex took the ordinary path.
 # Hand-written export file: Lean does not elaborate `bad`, so lean4export cannot
 # produce it.
-file: tests/bugs/beta-chain-subst.ndjson
+file: tests/other/beta-chain-subst.ndjson
 outcome: reject
